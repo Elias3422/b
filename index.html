@@ -1,83 +1,36 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>M3U Kategorie-Extractor</title>
-<style>
-  body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;margin:18px;background:#f7fafc;color:#0f172a}
-  .card{background:#fff;border-radius:10px;padding:18px;box-shadow:0 6px 18px rgba(2,6,23,0.06);max-width:900px;margin:16px auto}
-  input[type=text]{width:100%;padding:10px;border:1px solid #e6e9ef;border-radius:8px}
-  button{padding:10px 14px;border-radius:8px;border:0;background:#0ea5a4;color:#fff;cursor:pointer}
-  pre{background:#0b1220;color:#e6eef8;padding:12px;border-radius:8px;overflow:auto}
-  .small{font-size:0.85rem;color:#475569}
-</style>
+  <meta charset="UTF-8">
+  <title>M3U Scan Tool</title>
+  <style>
+    body { font-family: monospace; background: #0a0a0a; color: #00ff90; padding: 20px; }
+    input { width: 80%; padding: 8px; }
+    button { padding: 8px 16px; margin-left: 8px; }
+    pre { background: #111; padding: 10px; border-radius: 8px; white-space: pre-wrap; }
+  </style>
 </head>
 <body>
-  <div class="card">
-    <h1>M3U Kategorie-Extractor</h1>
-    <p class="small">Gib eine M3U-URL ein (nur eigene oder genehmigte Playlists!). Die Seite ruft einen Backend-Proxy auf, der die Playlist liest und Kategorien zurückliefert.</p>
+  <h1>🔍 M3U Scanner</h1>
+  <input id="url" placeholder="M3U URL eingeben...">
+  <button onclick="scan()">Scan</button>
+  <pre id="output"></pre>
 
-    <label>Playlist-URL oder Pfad:</label>
-    <input id="url" type="text" placeholder="http://example/get.php?username=...&type=m3u_plus" />
+  <script>
+    async function scan() {
+      const url = document.getElementById("url").value.trim();
+      if (!url) return alert("Bitte eine URL eingeben!");
+      document.getElementById("output").textContent = "⏳ Scanne...";
 
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button id="go">Kategorien holen</button>
-      <button id="save" style="background:#64748b">Als Datei speichern</button>
-    </div>
-
-    <p id="status" class="small"></p>
-
-    <h3>Gefundene Kategorien</h3>
-    <pre id="out">— noch keine Abfrage —</pre>
-  </div>
-
-<script>
-const workerEndpoint = "https://m3usort.elias256.workers.dev"; 
-// -----> ERSETZE das mit deiner Worker-URL nach Deployment
-
-const urlInput = document.getElementById("url");
-const out = document.getElementById("out");
-const statusP = document.getElementById("status");
-const go = document.getElementById("go");
-const save = document.getElementById("save");
-
-async function fetchCats() {
-  const src = urlInput.value.trim();
-  if(!src) { alert("Bitte eine URL eingeben."); return; }
-  statusP.textContent = "Sende Anfrage...";
-  out.textContent = "";
-  try {
-    const res = await fetch(workerEndpoint + "?url=" + encodeURIComponent(src), {
-      method: "GET",
-      credentials: "omit",
-      headers: { "Accept": "application/json" }
-    });
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    const j = await res.json();
-    if(j.error) {
-      statusP.textContent = "Fehler: " + j.error;
-      out.textContent = JSON.stringify(j, null, 2);
-      return;
+      try {
+        const workerUrl = "https://m3usort.elias256.workers.dev"; // Deine Worker-URL
+        const res = await fetch(`${workerUrl}?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("output").textContent = "❌ Fehler: " + err.message;
+      }
     }
-    statusP.textContent = `Kategorien gefunden: ${j.categories.length}`;
-    out.textContent = j.categories.join("\n");
-    out.dataset.raw = JSON.stringify(j, null, 2);
-  } catch(e) {
-    statusP.textContent = "Request-Fehler: " + e.message;
-    out.textContent = e.stack || e.message;
-  }
-}
-
-go.addEventListener("click", fetchCats);
-save.addEventListener("click", () => {
-  const text = out.textContent || "";
-  const blob = new Blob([text], {type: "text/plain;charset=utf-8"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "categories.txt";
-  a.click();
-});
-</script>
+  </script>
 </body>
 </html>
